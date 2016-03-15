@@ -101,13 +101,23 @@ object RsaSignature {
 
 /*
 
+Digital signature ensures:
+--authentication
+--non-repudiation
+--message integrity
+
+Ref: https://en.wikipedia.org/wiki/Digital_signature
+
+
 Build the key files
 
 Take a string, hash it. Then digitally sign that hash with your private key. Send
 it to someone who has your public key. They run verify() using your public key. 
 Assuming they know (or you also give them the thing you're verifying) then if 
-verify returns true, they know that the private key corresponding to the public key
-they have was used to make the signature.
+verify returns true, they know that the private key they have correspond to the
+public key used to make the signature. If the public key was obtained in a verifiable
+way from the person with the private key, the message is authentic--from whom
+it was said to be from.
 
 # hash (not really important)
 echo "mythingname" | openssl sha1 > name_sha1.txt
