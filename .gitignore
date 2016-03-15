@@ -2,3 +2,4 @@
 *.pem
 *.jar
 *.txt
+Db.scala
