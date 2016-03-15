@@ -70,14 +70,8 @@ object RsaSignature {
 	}
 
 	// ref: https://gist.github.com/urcadox/6173812
-	// Encrypt with a public key (sign with a private key)
-	// Encrypting with a private key is kind of pointless since everyone can decrypt it
-	// ...though if your purpose is to ensure integrity as well as authenticity
-	// it might make sense.
 	def encrypt(publicKey:PublicKey, plainText:Array[Byte]) : Array[Byte] = {
-		
 		import javax.crypto.{Cipher}
-
 		val cipher = Cipher.getInstance("RSA")
 		cipher.init(Cipher.ENCRYPT_MODE, publicKey)
 		cipher.doFinal(plainText)
