@@ -51,8 +51,9 @@ object RsaSign {
 	// convert a Base64 String (of PKCS#8 bytes) to a PublicKey 
 	def publicKeyFromBase64String(base64String:String):PublicKey = {
 		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		publicKeyFromBytes(bytesFromString(base64String))
+		publicKeyFromBytes(bytesFromString(publicKeyFromBase64String))
 	}
+
 
 	def privateKeyFromFile(filename:String):PrivateKey = {
 		privateKeyFromBytes(getBytesFromPKCS_8_DER_File(filename))
