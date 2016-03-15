@@ -16,7 +16,7 @@ scala> RsaSignature.testBase64Conversion
 
 */
 
-import java.security.{PrivateKey,PublicKey,Signature,KeyFactory}
+import java.security.{PrivateKey,PublicKey,Signature,KeyFactory,KeyPairGenerator}
 import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
 
 object RsaSign {
@@ -50,8 +50,8 @@ object RsaSign {
 
 	// convert a Base64 String (of PKCS#8 bytes) to a PublicKey 
 	def publicKeyFromBase64String(base64String:String):PublicKey = {
-		val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		publicKeyFromBytes(bytes)
+		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
+		publicKeyFromBytes(bytesFromString(base64String))
 	}
 
 	def privateKeyFromFile(filename:String):PrivateKey = {
@@ -63,8 +63,8 @@ object RsaSign {
 	}
 
 	def privateKeyFromBase64String(base64String:String):PrivateKey = {
-		val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		privateKeyFromBytes(bytes)
+		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
+		privateKeyFromBytes(bytesFromString(base64String))
 	}
 
 	// Convert a PrivateKey to a Base64 printable String
@@ -82,11 +82,18 @@ object RsaSign {
 		javax.xml.bind.DatatypeConverter.printBase64Binary(bytes)
 	}
 
-	// Convert a Base64 String to binary Array[Byte]
-	def stringToBytes(inputString:String):Array[Byte] = {
-		import org.apache.commons.codec.binary.Base64
-		Base64.decodeBase64(inputString)		
+	def bytesFromString(base64String:String):Array[Byte] = {
+		javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
 	}
+
+
+	// Convert a Base64 String to binary Array[Byte]
+	// The hard way (have to include commons jar in classpath)
+	// Use bytesFromString above instead.
+	// def stringToBytes(inputString:String):Array[Byte] = {
+	// 	import org.apache.commons.codec.binary.Base64
+	// 	Base64.decodeBase64(inputString)		
+	// }
 
 	// Load a binary file into an Array[Byte]
 	def getBytesFromPKCS_8_DER_File(filename:String):Array[Byte] = {
@@ -95,6 +102,24 @@ object RsaSign {
 		println(s"[getBytesFromPKCS_8_DER_File] Loaded ${byteArray.size} bytes from ${filename}")
 		byteArray
 	}
+
+	/**
+		Do this in scala:
+			# private key
+			openssl genrsa -out rsa4096_private.pem 4096
+			openssl pkcs8 -topk8 -inform PEM -outform DER -in rsa4096_private.pem -out rsa4096_private.der -nocrypt
+
+			# public key
+			openssl rsa -in rsa4096_private.pem -pubout
+			openssl rsa -in rsa4096_private.pem -pubout -outform DER -out rsa4096_public.der
+	*/
+	def genSigningKeyPair = {
+
+		val k = KeyPairGenerator.getInstance("RSA")
+
+
+	}
+
 
 	// ref: https://gist.github.com/urcadox/6173812
 	// def encrypt(publicKey:PublicKey, plainText:Array[Byte]) : Array[Byte] = {
@@ -176,10 +201,12 @@ echo "mythingname" | openssl sha1 > name_sha1.txt
 
 # private key
 openssl genrsa -out rsa4096_private.pem 4096
+openssl pkcs8 -topk8 -inform PEM -outform DER -in rsa4096_private.pem -out rsa4096_private.der -nocrypt
 
 # public key
 openssl rsa -in rsa4096_private.pem -pubout
 openssl rsa -in rsa4096_private.pem -pubout -outform DER -out rsa4096_public.der
+
 # Sign / verify
 # https://www.openssl.org/docs/manmaster/apps/rsautl.html
 #
