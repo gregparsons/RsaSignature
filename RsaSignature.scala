@@ -17,6 +17,9 @@ scala> x.run
 
 */
 
+import java.security.{PrivateKey,PublicKey,Signature,KeyFactory}
+import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
+
 object RsaSignature {
 
 	val PUBLIC_KEY_FILE = "rsa4096_public.der"
@@ -27,10 +30,6 @@ object RsaSignature {
 		val byteArray = Files.readAllBytes(Paths.get(filename))
 		byteArray
 	}
-
-
-	import java.security.{PrivateKey,PublicKey,Signature,KeyFactory}
-	import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
 
 	def getPrivate:PrivateKey = {
 		//		val privateKeyBytes:Array[Byte] = loadBytesfromPkcs8File("rsa4096_private.der")
@@ -97,9 +96,6 @@ object RsaSignature {
 		println(s"Verified: ${verified}")
 
 	}
-
-
-
 }
 
 
