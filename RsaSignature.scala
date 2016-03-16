@@ -103,6 +103,13 @@ object RsaSign {
 		byteArray
 	}
 
+
+	// Use this to easily generate keys in the current directory from REPL
+	def writeKeyPair(filenamePrefix:String) = {
+		writeKeyPairToFiles(genSigningKeyPair, filenamePrefix)
+	}
+
+
 	/**
 		Do this in scala:
 			# private key
@@ -134,7 +141,7 @@ object RsaSign {
 		val privateKey:PrivateKey = kp.getPrivate()
 		val publicKey:PublicKey = kp.getPublic()
 
-		println(s"Generated RSA keys. \nPrivate: \n${privateKey}\nPublic:\n${publicKey}")
+		println(s"Generated RSA keys. \nPrivate: \n${privateKeyAsString(privateKey)}\nPublic:\n${publicKeyAsString(publicKey)}")
 
 		kp
 
@@ -143,6 +150,7 @@ object RsaSign {
 
 	val GENERATED_RSA_PUBLIC_SUFFIX = "_public.der"
 	val GENERATED_RSA_PRIVATE_SUFFIX = "_private.der"
+
 	def writeKeyPairToFiles(kp:KeyPair, filePrefix:String) = {
 		import java.nio.file.{Files,Paths,FileSystems}
 
@@ -152,8 +160,23 @@ object RsaSign {
 		Files.write(privatePath, kp.getPrivate.getEncoded)
 		Files.write(publicPath,	kp.getPublic.getEncoded)
 
+		printKeysToScreen(filePrefix)
 
 	}
+
+	// Print the Key->Base64->Ascii string to the screen
+	def printKeysToScreen(filePrefix:String) = {
+
+		val prv = privateKeyFromFile(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX)
+		val pub = publicKeyFromFile(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX)
+
+		println("\n\nPrivate\n")
+		println(privateKeyAsString(prv))
+		println("\nPublic:\n")
+		println(publicKeyAsString(pub))
+
+	}
+
 
 
 	// ref: https://gist.github.com/urcadox/6173812
