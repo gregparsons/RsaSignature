@@ -1,7 +1,7 @@
 
 /*
 
-Sign and verify using RSA in Scala. Runs in Scala REPL interpreter. See
+Sign and verify (something) using RSA in Scala. Runs in Scala REPL interpreter. See
 comments below to first create a PKCS8 public/private key pair.
 
 
@@ -9,15 +9,14 @@ comments below to first create a PKCS8 public/private key pair.
 
 Run in Scala REPL
 $> scala -classpath commons-codec-1.10.jar (only needed if using Base64 stuff)
-scala> :load test.scala
-scala> val x = RsaSignature
-scala> x.run
+scala> :load RsaSign.scala
+scala> RsaSignature.testBase64Conversion
 
 
 
 */
 
-import java.security.{PrivateKey,PublicKey,Signature,KeyFactory}
+import java.security.{PrivateKey,PublicKey,Signature,KeyFactory,KeyPairGenerator,KeyPair}
 import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
 
 object RsaSign {
@@ -51,8 +50,8 @@ object RsaSign {
 
 	// convert a Base64 String (of PKCS#8 bytes) to a PublicKey 
 	def publicKeyFromBase64String(base64String:String):PublicKey = {
-		val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		publicKeyFromBytes(bytes)
+		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
+		publicKeyFromBytes(bytesFromString(base64String))
 	}
 
 	def privateKeyFromFile(filename:String):PrivateKey = {
@@ -64,8 +63,8 @@ object RsaSign {
 	}
 
 	def privateKeyFromBase64String(base64String:String):PrivateKey = {
-		val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		privateKeyFromBytes(bytes)
+		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
+		privateKeyFromBytes(bytesFromString(base64String))
 	}
 
 	// Convert a PrivateKey to a Base64 printable String
@@ -83,11 +82,18 @@ object RsaSign {
 		javax.xml.bind.DatatypeConverter.printBase64Binary(bytes)
 	}
 
-	// Convert a Base64 String to binary Array[Byte]
-	def stringToBytes(inputString:String):Array[Byte] = {
-		import org.apache.commons.codec.binary.Base64
-		Base64.decodeBase64(inputString)		
+	def bytesFromString(base64String:String):Array[Byte] = {
+		javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
 	}
+
+
+	// Convert a Base64 String to binary Array[Byte]
+	// The hard way (have to include commons jar in classpath)
+	// Use bytesFromString above instead.
+	// def stringToBytes(inputString:String):Array[Byte] = {
+	// 	import org.apache.commons.codec.binary.Base64
+	// 	Base64.decodeBase64(inputString)		
+	// }
 
 	// Load a binary file into an Array[Byte]
 	def getBytesFromPKCS_8_DER_File(filename:String):Array[Byte] = {
@@ -96,6 +102,82 @@ object RsaSign {
 		println(s"[getBytesFromPKCS_8_DER_File] Loaded ${byteArray.size} bytes from ${filename}")
 		byteArray
 	}
+
+
+	// Use this to easily generate keys in the current directory from REPL
+	def writeKeyPair(filenamePrefix:String) = {
+		writeKeyPairToFiles(genSigningKeyPair, filenamePrefix)
+	}
+
+
+	/**
+		Do this in scala:
+			# private key
+			openssl genrsa -out rsa4096_private.pem 4096
+			openssl pkcs8 -topk8 -inform PEM -outform DER -in rsa4096_private.pem -out rsa4096_private.der -nocrypt
+
+			# public key
+			openssl rsa -in rsa4096_private.pem -pubout
+			openssl rsa -in rsa4096_private.pem -pubout -outform DER -out rsa4096_public.der
+
+			Refs:
+			https://docs.oracle.com/javase/8/docs/api/java/security/KeyPairGenerator.html
+	*/
+	def genSigningKeyPair:KeyPair = {
+
+
+		//println("[genSigningKeyPair] Providers:\n")
+		//http://alvinalexander.com/scala/converting-java-collections-to-scala-list-map-array
+ 		//import scala.collection.JavaConversions._
+ 		//java.security.Security.getProviders().foreach(provider=>println(provider.getServices().foreach(svc=>println(svc.getAlgorithm()))))
+
+ 		// options: https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyPairGenerator
+
+		val kpg = java.security.KeyPairGenerator.getInstance("RSA")
+		kpg.initialize(4096)
+		val kp:KeyPair = kpg.genKeyPair
+
+
+		val privateKey:PrivateKey = kp.getPrivate()
+		val publicKey:PublicKey = kp.getPublic()
+
+		println(s"Generated RSA keys. \nPrivate: \n${privateKeyAsString(privateKey)}\nPublic:\n${publicKeyAsString(publicKey)}")
+
+		kp
+
+	}
+
+
+	val GENERATED_RSA_PUBLIC_SUFFIX = "_public.der"
+	val GENERATED_RSA_PRIVATE_SUFFIX = "_private.der"
+
+	def writeKeyPairToFiles(kp:KeyPair, filePrefix:String) = {
+		import java.nio.file.{Files,Paths,FileSystems}
+
+		val privatePath = Paths.get(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX) 
+		val publicPath 	= Paths.get(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX) 
+
+		Files.write(privatePath, kp.getPrivate.getEncoded)
+		Files.write(publicPath,	kp.getPublic.getEncoded)
+
+		printKeysToScreen(filePrefix)
+
+	}
+
+	// Print the Key->Base64->Ascii string to the screen
+	def printKeysToScreen(filePrefix:String) = {
+
+		val prv = privateKeyFromFile(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX)
+		val pub = publicKeyFromFile(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX)
+
+		println("\n\nPrivate\n")
+		println(privateKeyAsString(prv))
+		println("\nPublic:\n")
+		println(publicKeyAsString(pub))
+
+	}
+
+
 
 	// ref: https://gist.github.com/urcadox/6173812
 	// def encrypt(publicKey:PublicKey, plainText:Array[Byte]) : Array[Byte] = {
@@ -108,49 +190,35 @@ object RsaSign {
 
 
 
+	// Write some keys to the current directory
+	def test_buildKey = {
 
-	def runTest = {
+		val filePrefix = "test1"
+		val keyPair = RsaSign.genSigningKeyPair
+		RsaSign.writeKeyPairToFiles(keyPair, filePrefix)
+	
+	}
 
+	// Write a key pair to files. Load, sign something, verify. Print verification result.
+	def test_writeKeySignAndVerify = {
 
-		// val PUBLIC_KEY_FILE = "rsa4096_public.der"
-		// val PRIVATE_KEY_FILE = "rsa4096_private.der"
+		// Write keys to file
+		val filePrefix = "test1"
+		val kp_original = RsaSign.genSigningKeyPair
+		RsaSign.writeKeyPairToFiles(kp_original, filePrefix)
 
+		val privateKey = privateKeyFromFile(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX)
+		val publicKey = publicKeyFromFile(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX)
+		val somethingToSign:Array[Byte] = ("hello").getBytes
 
-		// val privateKey:PrivateKey 	= privateKey(PRIVATE_KEY_FILE)
-		// val publicKey:PublicKey 	= publicKey(PUBLIC_KEY_FILE)
-		// val plainText:String = "Hello there. It's from me!"
-
-		// // Sign
-		// val signatureData:Array[Byte] = sign(privateKey, plainText.getBytes)
-		// // import org.apache.commons.codec.binary.Base64
-		// // println(s"${signedData.size} byte signature: " + Base64.encodeBase64(signedData, false, true).toString)
-		
-		// // Verify
-		// val verified:Boolean = verify(publicKey, signatureData, plainText.getBytes)
-		// println(s"Verified: ${verified}")
-
-
-		// //val privateString = bytesToString(privateKey.getEncoded)
-		// // val privateString = privateKeyAsString(privateKey)
-		// // println(s"Private Key as String (size: ${privateString.size}):")
-		// // println(privateString)
-
-
-		// // 1. Public key byte array
-		// println(s"publicKey.getEncoded: \n" + publicKey.getEncoded)
-
-		// // 2. public key byte array converted to base64 then to ASCII
-		// val publicString = publicKeyAsString(publicKey)
-		// println(s"publicKey (encoded as base64 then as US-ASCII) (size: ${publicString.size}):")
-		// println(publicString)
-
-		// val pubTestBytes = stringToBytes(publicString)
-		// println(s"Public Bytes: \n" + pubTestBytes)
-
-
-
+		// Sign and verify
+		val signature = sign(privateKey, somethingToSign)
+		val verified = verify(publicKey, signature, somethingToSign)
+		println(s"Verified: ${verified}")
 
 	}
+
+
 
 	/** Given a java.security.PublicKey, convert it to a base64 string then back
 	* 	to the binary key and verify they're identical.
@@ -160,7 +228,7 @@ object RsaSign {
 	scala> RsaSignature.testBase64Conversion
 	*
 	*/
-	def testBase64Conversion = {
+	def test_base64Conversion = {
 
 		val PUBLIC_KEY_FILE = "rsa4096_public.der"
 		val PRIVATE_KEY_FILE = "rsa4096_private.der"
@@ -218,10 +286,12 @@ echo "mythingname" | openssl sha1 > name_sha1.txt
 
 # private key
 openssl genrsa -out rsa4096_private.pem 4096
+openssl pkcs8 -topk8 -inform PEM -outform DER -in rsa4096_private.pem -out rsa4096_private.der -nocrypt
 
 # public key
 openssl rsa -in rsa4096_private.pem -pubout
 openssl rsa -in rsa4096_private.pem -pubout -outform DER -out rsa4096_public.der
+
 # Sign / verify
 # https://www.openssl.org/docs/manmaster/apps/rsautl.html
 #
