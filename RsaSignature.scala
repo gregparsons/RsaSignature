@@ -16,7 +16,7 @@ scala> RsaSignature.testBase64Conversion
 
 */
 
-import java.security.{PrivateKey,PublicKey,Signature,KeyFactory,KeyPairGenerator}
+import java.security.{PrivateKey,PublicKey,Signature,KeyFactory,KeyPairGenerator,KeyPair}
 import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
 
 object RsaSign {
@@ -51,9 +51,8 @@ object RsaSign {
 	// convert a Base64 String (of PKCS#8 bytes) to a PublicKey 
 	def publicKeyFromBase64String(base64String:String):PublicKey = {
 		//val bytes:Array[Byte] = javax.xml.bind.DatatypeConverter.parseBase64Binary(base64String)
-		publicKeyFromBytes(bytesFromString(publicKeyFromBase64String))
+		publicKeyFromBytes(bytesFromString(base64String))
 	}
-
 
 	def privateKeyFromFile(filename:String):PrivateKey = {
 		privateKeyFromBytes(getBytesFromPKCS_8_DER_File(filename))
@@ -113,10 +112,45 @@ object RsaSign {
 			# public key
 			openssl rsa -in rsa4096_private.pem -pubout
 			openssl rsa -in rsa4096_private.pem -pubout -outform DER -out rsa4096_public.der
-	*/
-	def genSigningKeyPair = {
 
-		val k = KeyPairGenerator.getInstance("RSA")
+			Refs:
+			https://docs.oracle.com/javase/8/docs/api/java/security/KeyPairGenerator.html
+	*/
+	def genSigningKeyPair:KeyPair = {
+
+
+		//println("[genSigningKeyPair] Providers:\n")
+		//http://alvinalexander.com/scala/converting-java-collections-to-scala-list-map-array
+ 		//import scala.collection.JavaConversions._
+ 		//java.security.Security.getProviders().foreach(provider=>println(provider.getServices().foreach(svc=>println(svc.getAlgorithm()))))
+
+ 		// options: https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyPairGenerator
+
+		val kpg = java.security.KeyPairGenerator.getInstance("RSA")
+		kpg.initialize(4096)
+		val kp:KeyPair = kpg.genKeyPair
+
+
+		val privateKey:PrivateKey = kp.getPrivate()
+		val publicKey:PublicKey = kp.getPublic()
+
+		println(s"Generated RSA keys. \nPrivate: \n${privateKey}\nPublic:\n${publicKey}")
+
+		kp
+
+	}
+
+
+	val GENERATED_RSA_PUBLIC_SUFFIX = "_public.der"
+	val GENERATED_RSA_PRIVATE_SUFFIX = "_private.der"
+	def writeKeyPairToFiles(kp:KeyPair, filePrefix:String) = {
+		import java.nio.file.{Files,Paths,FileSystems}
+
+		val privatePath = Paths.get(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX) 
+		val publicPath 	= Paths.get(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX) 
+
+		Files.write(privatePath, kp.getPrivate.getEncoded)
+		Files.write(publicPath,	kp.getPublic.getEncoded)
 
 
 	}
@@ -133,6 +167,33 @@ object RsaSign {
 
 
 
+	// Write some keys to the current directory
+	def test_buildKey = {
+
+		val filePrefix = "test1"
+		val keyPair = RsaSign.genSigningKeyPair
+		RsaSign.writeKeyPairToFiles(keyPair, filePrefix)
+	
+	}
+
+	// Write a key pair to files. Load, sign something, verify. Print verification result.
+	def test_writeKeySignAndVerify = {
+
+		// Write keys to file
+		val filePrefix = "test1"
+		val kp_original = RsaSign.genSigningKeyPair
+		RsaSign.writeKeyPairToFiles(kp_original, filePrefix)
+
+		val privateKey = privateKeyFromFile(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX)
+		val publicKey = publicKeyFromFile(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX)
+		val somethingToSign:Array[Byte] = ("hello").getBytes
+
+		// Sign and verify
+		val signature = sign(privateKey, somethingToSign)
+		val verified = verify(publicKey, signature, somethingToSign)
+		println(s"Verified: ${verified}")
+
+	}
 
 
 
@@ -144,7 +205,7 @@ object RsaSign {
 	scala> RsaSignature.testBase64Conversion
 	*
 	*/
-	def testBase64Conversion = {
+	def test_base64Conversion = {
 
 		val PUBLIC_KEY_FILE = "rsa4096_public.der"
 		val PRIVATE_KEY_FILE = "rsa4096_private.der"
