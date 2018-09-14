@@ -8,9 +8,9 @@ comments below to first create a PKCS8 public/private key pair.
 
 
 Run in Scala REPL
-$> scala -classpath commons-codec-1.10.jar (only needed if using Base64 stuff)
+$> scala -classpath lib/commons-codec-1.11.jar:lib/jaxb-api-2.3.0.jar
 scala> :load RsaSign.scala
-scala> RsaSignature.testBase64Conversion
+scala> RsaSign.test_base64Conversion
 
 
 
@@ -18,6 +18,7 @@ scala> RsaSignature.testBase64Conversion
 
 import java.security.{PrivateKey,PublicKey,Signature,KeyFactory,KeyPairGenerator,KeyPair}
 import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
+// import javax.xml.bind.DatatypeConverter
 
 object RsaSign {
 
