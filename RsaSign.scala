@@ -10,6 +10,9 @@ comments below to first create a PKCS8 public/private key pair.
 Run in Scala REPL
 $> scala -classpath lib/commons-codec-1.11.jar:lib/jaxb-api-2.3.0.jar
 scala> :load RsaSign.scala
+
+Generate some keys
+scala> RsaSign.writeKeyPairToFiles(RsaSign.genSigningKeyPair, "my_test_keys")
 scala> RsaSign.test_base64Conversion
 
 
@@ -21,6 +24,8 @@ import java.security.spec.{X509EncodedKeySpec, PKCS8EncodedKeySpec}
 // import javax.xml.bind.DatatypeConverter
 
 object RsaSign {
+
+	val KEY_FOLDER="./key/"
 
 	def sign(privateKey:PrivateKey, plainText:Array[Byte]) : Array[Byte] = {
 		val signer = Signature.getInstance("SHA1withRSA")
@@ -99,7 +104,7 @@ object RsaSign {
 	// Load a binary file into an Array[Byte]
 	def getBytesFromPKCS_8_DER_File(filename:String):Array[Byte] = {
 		import java.nio.file.{Files, Paths}
-		val byteArray = Files.readAllBytes(Paths.get(filename))
+		val byteArray = Files.readAllBytes(Paths.get(KEY_FOLDER + filename))
 		println(s"[getBytesFromPKCS_8_DER_File] Loaded ${byteArray.size} bytes from ${filename}")
 		byteArray
 	}
@@ -155,8 +160,8 @@ object RsaSign {
 	def writeKeyPairToFiles(kp:KeyPair, filePrefix:String) = {
 		import java.nio.file.{Files,Paths,FileSystems}
 
-		val privatePath = Paths.get(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX) 
-		val publicPath 	= Paths.get(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX) 
+		val privatePath = Paths.get(KEY_FOLDER + filePrefix + GENERATED_RSA_PRIVATE_SUFFIX) 
+		val publicPath 	= Paths.get(KEY_FOLDER + filePrefix + GENERATED_RSA_PUBLIC_SUFFIX) 
 
 		Files.write(privatePath, kp.getPrivate.getEncoded)
 		Files.write(publicPath,	kp.getPublic.getEncoded)
@@ -206,14 +211,18 @@ object RsaSign {
 		// Write keys to file
 		val filePrefix = "test1"
 		val kp_original = RsaSign.genSigningKeyPair
+		println("Generating public and private keys")
 		RsaSign.writeKeyPairToFiles(kp_original, filePrefix)
 
 		val privateKey = privateKeyFromFile(filePrefix + GENERATED_RSA_PRIVATE_SUFFIX)
 		val publicKey = publicKeyFromFile(filePrefix + GENERATED_RSA_PUBLIC_SUFFIX)
+		println("Generating a text file to sign.")		
 		val somethingToSign:Array[Byte] = ("hello").getBytes
 
 		// Sign and verify
+		println("Generating signature on the text file using test private key.")		
 		val signature = sign(privateKey, somethingToSign)
+		println("Verifying signature on the text file matches the test public key.")		
 		val verified = verify(publicKey, signature, somethingToSign)
 		println(s"Verified: ${verified}")
 

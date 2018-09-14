@@ -3,3 +3,4 @@
 *.txt
 *.rsa
 Db.scala
+key/
