@@ -1,6 +1,5 @@
 *.der
 *.pem
-*.jar
 *.txt
 *.rsa
 Db.scala
